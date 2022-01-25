@@ -48,18 +48,11 @@ class RLClansPanel extends PluginPanel {
     private String activeGroup;
 
     // Group overview panel
-    //private final JPanel overviewPanel = new JPanel();
-    //private final JPanel overviewPanelHeader = new JPanel();
-    //private final JPanel overviewPanelBody = new JPanel();
     private OverviewPanel overviewPanel;
 
     private PanelManager panelManager;
     private final WomProvider womProvider = new WomProvider();
 
-    // WOM stuff
-    private final HttpClient httpClient;
-    private final Gson gson = new Gson();
-    private final String womUrl = "https://api.wiseoldman.net";
 
     // Containers for WOM data (Gson deserializes data from WOM into these)
     private Player player;
@@ -68,8 +61,6 @@ class RLClansPanel extends PluginPanel {
 
     RLClansPanel(RLClansPlugin plugin, RLClansConfig config, Client client, SkillIconManager iconManager) {
         super();
-
-        httpClient = HttpClient.newHttpClient();
 
         // Border & layout for this PluginPanel
         setBorder(new EmptyBorder(6, 6, 6, 6));
