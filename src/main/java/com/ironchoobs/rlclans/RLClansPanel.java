@@ -3,22 +3,17 @@ package com.ironchoobs.rlclans;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.game.SkillIconManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
 
-import javax.net.ssl.HttpsURLConnection;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
-import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -36,44 +31,48 @@ class RLClansPanel extends PluginPanel {
     private final JPanel statusPanel = new JPanel();            // vertical layout
     private final JPanel statusPanelHeader = new JPanel();      // Child of status panel, horizontal layout
     private final JPanel statusPanelBody = new JPanel();        // Child of status panel, horizontal layout
+    private final JLabel statusLabel = new JLabel();
 
     // Navigation panel
     private final JPanel navPanel = new JPanel();               // layout as above
     private final JPanel navPanelHeader = new JPanel();
     private final JPanel navPanelBody = new JPanel();
+    private final JComboBox<JLabel> navCombo = new JComboBox<>();
 
-    private final JPanel groupSelectorPanel = new JPanel();
-    private final JPanel groupOverviewPanel = new JPanel();
-
-    //private final JPanel mainPanel = new JPanel();
-    private final JLabel statusLabel = new JLabel(); // testing only
+    // Group selection panel
+    private final JPanel groupSelectPanel = new JPanel();
+    private final JPanel groupSelectPanelHeader = new JPanel();
+    private final JPanel groupSelectPanelBody = new JPanel();
+    private final JComboBox<JLabel> clanNamesCombo = new JComboBox<>();
     private final JLabel clanNameLabel = new JLabel();
-    private final JComboBox<JLabel> clanNames = new JComboBox<JLabel>();
-
-    private final HttpClient httpClient;
-    private final Gson gson = new Gson();
-
-    // Containers for WOM data
-    private Player player;
-    private final ArrayList<PlayerCompetition> competitions = new ArrayList<PlayerCompetition>();
-    private final ArrayList<PlayerGroup> groups = new ArrayList<PlayerGroup>();
-
     private String activeGroup;
 
-    // Wise Old Man base API address
+    // Group overview panel
+    private final JPanel overviewPanel = new JPanel();
+    private final JPanel overviewPanelHeader = new JPanel();
+    private final JPanel overviewPanelBody = new JPanel();
+
+    // WOM stuff
+    private final HttpClient httpClient;
+    private final Gson gson = new Gson();
     private final String womUrl = "https://api.wiseoldman.net";
+
+    // Containers for WOM data (Gson deserializes data from WOM into these)
+    private Player player;
+    private final ArrayList<PlayerCompetition> competitions = new ArrayList<>();
+    private final ArrayList<PlayerGroup> groups = new ArrayList<>();
 
     RLClansPanel(RLClansPlugin plugin, RLClansConfig config, Client client, SkillIconManager iconManager) {
         super();
 
-        // TODO: Present "waiting for login" panel
-
         httpClient = HttpClient.newHttpClient();
 
+        // Border & layout for this PluginPanel
         setBorder(new EmptyBorder(6, 6, 6, 6));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new BorderLayout());
 
+        // Main layout panel (everything is contained in this)
         final JPanel layoutPanel = new JPanel();
         BoxLayout boxLayout = new BoxLayout(layoutPanel, BoxLayout.Y_AXIS);
         layoutPanel.setLayout(boxLayout);
@@ -82,7 +81,9 @@ class RLClansPanel extends PluginPanel {
         // Font for panel names
         Font smallText = statusLabel.getFont().deriveFont(15.0f);
 
-
+        // Padding sizes for UI elements
+        final Dimension headerPadding = new Dimension(0, 5); // between header and body
+        final Dimension panelPadding = new Dimension(0, 15); // between each panel
 
         // ----------------- Status Panel --------------------------------------------------
 
@@ -93,49 +94,83 @@ class RLClansPanel extends PluginPanel {
         //  -- Status Body - horizontal box layout
         //      -- Status label
 
-        statusPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         statusPanel.setLayout(new BoxLayout(statusPanel, BoxLayout.PAGE_AXIS));
 
-        statusPanelHeader.setBackground(ColorScheme.DARK_GRAY_COLOR);
         statusPanelHeader.setLayout(new BoxLayout(statusPanelHeader, BoxLayout.LINE_AXIS));
         JLabel statusPanelLabel = new JLabel("Status");
         statusPanelLabel.setFont(smallText);
         statusPanelHeader.add(statusPanelLabel);
         statusPanelHeader.add(Box.createHorizontalGlue());
 
-        statusPanelBody.setBackground(ColorScheme.DARK_GRAY_COLOR);
         statusPanelBody.setLayout(new BoxLayout(statusPanelBody, BoxLayout.LINE_AXIS));
         statusPanelBody.add(statusLabel);
 
         statusPanel.add(statusPanelHeader);
+        statusPanel.add(Box.createRigidArea(headerPadding));
         statusPanel.add(statusPanelBody);
 
         layoutPanel.add(statusPanel);
-        layoutPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        layoutPanel.add(Box.createRigidArea(panelPadding));
+
+        // ---------------------------------------------------------------------------------
+
+        // ------------------ Group Selector -----------------------------------------------
+
+        groupSelectPanel.setLayout(new BoxLayout(groupSelectPanel, BoxLayout.PAGE_AXIS));
+
+        groupSelectPanelHeader.setLayout(new BoxLayout(groupSelectPanelHeader, BoxLayout.LINE_AXIS));
+        JLabel groupSelectPanelLabel = new JLabel("Group");
+        groupSelectPanelLabel.setFont(smallText);
+        groupSelectPanelHeader.add(groupSelectPanelLabel);
+        groupSelectPanelHeader.add(Box.createHorizontalGlue());
+
+        groupSelectPanelBody.setLayout(new BoxLayout(groupSelectPanelBody, BoxLayout.LINE_AXIS));
+        groupSelectPanelBody.add(clanNameLabel);
+        groupSelectPanelBody.add(clanNamesCombo);
+        clanNameLabel.setVisible(false);        // Enabled if only one group is found
+        clanNamesCombo.setVisible(false);       // Enabled if multiple groups are found
+
+        groupSelectPanel.add(groupSelectPanelHeader);
+        groupSelectPanel.add(Box.createRigidArea(headerPadding));
+        groupSelectPanel.add(groupSelectPanelBody);
+
+        layoutPanel.add(groupSelectPanel);
+        layoutPanel.add(Box.createRigidArea(panelPadding));
 
         // ---------------------------------------------------------------------------------
 
         // ------------------ Navigation Panel ---------------------------------------------
-        navPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        navPanel.setLayout(new BoxLayout(navPanel, BoxLayout.LINE_AXIS));
 
-        // TODO: Navigation items
-        JLabel navLabel = new JLabel("Navigation");
-        navLabel.setFont(smallText);
-        navPanel.add(navLabel);
+        navPanel.setLayout(new BoxLayout(navPanel, BoxLayout.PAGE_AXIS));
+
+        navPanelHeader.setLayout(new BoxLayout(navPanelHeader, BoxLayout.LINE_AXIS));
+        JLabel navPanelLabel = new JLabel("Navigation");
+        navPanelLabel.setFont(smallText);
+        navPanelHeader.add(navPanelLabel);
+        navPanelHeader.add(Box.createHorizontalGlue());
+
+        navPanelBody.setLayout(new BoxLayout(navPanelBody, BoxLayout.LINE_AXIS));
+        navPanelBody.add(navCombo);
+        navCombo.setVisible(false);
+
+        navPanel.add(navPanelHeader);
+        navPanel.add(Box.createRigidArea(headerPadding));
+        navPanel.add(navPanelBody);
+
         layoutPanel.add(navPanel);
+        layoutPanel.add(Box.createRigidArea(panelPadding));
 
         // ---------------------------------------------------------------------------------
 
-        // TODO: Create other panels (competitions, clan status, gains, stuff like that)
+        // TODO: Create other panels (competitions, clan stats, gains, stuff like that)
 
 
         // Add action listeners on startup to avoid double-adding when re-logging in
         // NOTE: This isn't called when we manually set the active element
         // Handles group selection
-        clanNames.addActionListener(e -> {
-            if (clanNames.getSelectedItem() != null) {
-                JLabel l = (JLabel) clanNames.getSelectedItem();
+        clanNamesCombo.addActionListener(e -> {
+            if (clanNamesCombo.getSelectedItem() != null) {
+                JLabel l = (JLabel) clanNamesCombo.getSelectedItem();
                 activeGroup = l.getText();
 
                 // TODO: Active group is set, load stuff
@@ -203,15 +238,15 @@ class RLClansPanel extends PluginPanel {
         else {
             // Multiple groups, show group drop-down box
 
-            clanNames.setVisible(true);
-            clanNames.removeAllItems();
+            clanNamesCombo.setVisible(true);
+            clanNamesCombo.removeAllItems();
             for (PlayerGroup g : groups) {
                 JLabel l = new JLabel(g.name);
-                clanNames.addItem(l);
+                clanNamesCombo.addItem(l);
             }
 
-            clanNames.setSelectedIndex(0);  // TODO: Default group setting
-            activeGroup = ((JLabel) clanNames.getSelectedItem()).getText();  // remember to set active group
+            clanNamesCombo.setSelectedIndex(0);  // TODO: Default group setting
+            activeGroup = ((JLabel) clanNamesCombo.getSelectedItem()).getText();  // remember to set active group
         }
 
         // TODO: Navigation menu
@@ -275,7 +310,7 @@ class RLClansPanel extends PluginPanel {
                             player = gson.fromJson(line, Player.class);
 
                             log.info("Found id: " + player.id + " for account: " + player.username);
-                            statusLabel.setText("WOM ID: " + player.id);
+                            statusLabel.setText("Loading Groups");
                             //statusLabel.setVisible(true);
 
                             // We have the player info from WOM, now get the group info
@@ -342,7 +377,7 @@ class RLClansPanel extends PluginPanel {
                             // are all complete, so we can use the Player* data in the UI now.
                             // TODO: Present main panel entry point (group selector)
 
-                            statusLabel.setText("Loaded data from WOM");
+                            statusLabel.setText("Loading succeeded");
                             buildMainPanel();
                         }
                     }
@@ -400,6 +435,8 @@ class RLClansPanel extends PluginPanel {
                             // TODO: Add groups to drop-down box to select "active" group
                             // TODO: If there is only one group, use a label instead of a drop-down box.
                             // TODO: Default group should be adjustable in settings menu and save to config file (by group ID)
+
+                            statusLabel.setText("Loading Competitions");
 
                             // This will be the last request in the startup chain
                             getPlayerCompetitions();
