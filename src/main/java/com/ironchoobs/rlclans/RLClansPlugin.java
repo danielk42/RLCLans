@@ -37,6 +37,7 @@ public class RLClansPlugin extends Plugin
 
 	private RLClansPanel panel;
 	private NavigationButton navButton;
+	private WomProvider womProvider;
 
 	@Override
 	protected void startUp() throws Exception

@@ -48,9 +48,13 @@ class RLClansPanel extends PluginPanel {
     private String activeGroup;
 
     // Group overview panel
-    private final JPanel overviewPanel = new JPanel();
-    private final JPanel overviewPanelHeader = new JPanel();
-    private final JPanel overviewPanelBody = new JPanel();
+    //private final JPanel overviewPanel = new JPanel();
+    //private final JPanel overviewPanelHeader = new JPanel();
+    //private final JPanel overviewPanelBody = new JPanel();
+    private OverviewPanel overviewPanel;
+
+    private PanelManager panelManager;
+    private final WomProvider womProvider = new WomProvider();
 
     // WOM stuff
     private final HttpClient httpClient;
@@ -162,6 +166,20 @@ class RLClansPanel extends PluginPanel {
 
         // ---------------------------------------------------------------------------------
 
+        // ------------------ Group Overview -----------------------------------------------
+
+        // TODO: PanelManager will own this panel + all other "data" panels
+        // TODO: as we only want one panel to display at any given time
+        overviewPanel = new OverviewPanel(smallText, headerPadding);
+        layoutPanel.add(overviewPanel);
+        overviewPanel.setVisible(true);
+
+        // ---------------------------------------------------------------------------------
+
+
+        panelManager = new PanelManager();
+
+
         // TODO: Create other panels (competitions, clan stats, gains, stuff like that)
 
 
@@ -177,10 +195,6 @@ class RLClansPanel extends PluginPanel {
             }
         });
 
-        // for testing without logging in
-        // TODO: Remove
-        getPlayerFromWom("fartrock");
-
         // NOTE: getPlayerFromWom()'s callback MUST complete before calling other getPlayer* functions!
 
         // NOTE: We need to know when we have all the info, for now each callback makes the next
@@ -192,14 +206,40 @@ class RLClansPanel extends PluginPanel {
         // Then check in the update cycle whether both have finished and proceed with UI setup from there.
 
         // Current setup is loggedIn -> getPlayerFromWom -> getPlayerGroups -> getPlayerCompetitions -> buildMainPanel
+
+        // for testing without logging in
+        loadStartupData("fartrock");
+    }
+
+    protected void loadStartupData(String username) {
+        // Get the startup data from WOM
+        womProvider.getPlayerFromWom(username, player -> {
+            this.player = player;
+
+            statusLabel.setText("Loading Groups");
+
+            womProvider.getPlayerGroups(player.id, groups -> {
+                this.groups.clear();
+                this.groups.addAll(groups);
+
+                statusLabel.setText("Loading Competitions");
+
+                womProvider.getPlayerCompetitions(player.id, comps -> {
+                    this.competitions.clear();
+                    this.competitions.addAll(comps);
+
+                    statusLabel.setText("Load success");
+
+                    buildMainPanel();
+                });
+            });
+        });
     }
 
     protected void loggedIn(Client client) {
 
-        // TODO: Present "loading" panel
-        statusLabel.setText("Loading");
-
-        getPlayerFromWom(client.getUsername());
+        statusLabel.setText("Loading Player");
+        loadStartupData(client.getUsername());
 
         // NOTE: It's possible to start the loading sequence as soon as a username is present however
         // threading makes it more difficult to stop the process if the user types a different username.
@@ -252,200 +292,5 @@ class RLClansPanel extends PluginPanel {
         // TODO: Navigation menu
 
         // TODO: Setup group overview on active group
-    }
-
-    private void getPlayerFromWom(String name) {
-
-        // Requests to /players/username/<name> always return one result
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(womUrl + "/players/username/" + name))
-                .GET()
-                .setHeader("Content-Type", "application/json; utf-8")
-                .setHeader("Accept", "application/json")
-                .timeout(Duration.ofSeconds(20))
-                .build();
-
-        CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
-                request, HttpResponse.BodyHandlers.ofInputStream());
-
-        // NOTE: Code in here is executed on the main thread, not the worker. So we can
-        // safely set variables in this class here. Will be called when the http request
-        // is completed on the worker thread.
-        response.thenAccept(
-                r -> {
-                    try {
-                        if (r.statusCode() != 200) {
-                            // Http error, read the response
-
-                            BufferedReader b = new BufferedReader(new InputStreamReader(r.body()));
-                            String line;
-                            if ((line = b.readLine()) != null) {
-                                log.error("Failed: HTTP error code: " + r.statusCode() + ", Error: " + line);
-                            }
-
-                            // TODO: If player isn't in WOM, we will get "player not found" as a response.
-                            // TODO: Check if this comes with an error code too, and if it does, handle it here
-                            // TODO: 400 is bad request and 404 is missing data (ie player not in database)?
-                            // TODO: Present option to add account to WOM database if account not found
-
-                            // TODO: Network issues? Check other http codes we should handle!
-
-                            // If we always get a 404 if player isn't in WOM database then we can prompt to
-                            // add the account.
-                            if (r.statusCode() == 404) {
-                                log.error("404 error fetching player data from WOM");
-                            }
-
-                            return;
-                        }
-
-                        InputStreamReader in = new InputStreamReader(r.body());
-                        BufferedReader br = new BufferedReader(in);
-                        String line;
-
-                        // NOTE: WOM returns entire result in one line.
-                        if ((line = br.readLine()) != null) {
-                            log.info(line);
-
-                            player = gson.fromJson(line, Player.class);
-
-                            log.info("Found id: " + player.id + " for account: " + player.username);
-                            statusLabel.setText("Loading Groups");
-                            //statusLabel.setVisible(true);
-
-                            // We have the player info from WOM, now get the group info
-                            getPlayerGroups();
-                        }
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-        );
-    }
-
-    private void getPlayerCompetitions() {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(womUrl + "/players/" + player.id + "/competitions"))
-                .GET()
-                .setHeader("Content-Type", "application/json; utf-8")
-                .setHeader("Accept", "application/json")
-                .timeout(Duration.ofSeconds(20))
-                .build();
-
-        CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
-                request, HttpResponse.BodyHandlers.ofInputStream());
-
-        response.thenAccept(
-                r -> {
-                    try {
-                        if (r.statusCode() != 200) {
-
-                            BufferedReader b = new BufferedReader(new InputStreamReader(r.body()));
-                            String line;
-                            if ((line = b.readLine()) != null) {
-                                log.error("Failed: Http error code: " + r.statusCode() + ", Error: " + line);
-                            }
-
-                            // TODO: Handle case where there isn't any competitions
-
-                            return;
-                        }
-
-                        InputStreamReader in = new InputStreamReader(r.body());
-                        BufferedReader br = new BufferedReader(in);
-                        String line;
-
-                        if ((line = br.readLine()) != null) {
-                            PlayerCompetition[] c = gson.fromJson(line, PlayerCompetition[].class);
-
-                            competitions.clear();
-                            competitions.addAll(List.of(c));
-
-                            for (PlayerCompetition pc : competitions) {
-                                log.info("Found competition: " + pc.title);
-                            }
-
-                            /*
-                            TODO: We now have all competitions the player is involved in, which may come from
-                            TODO: multiple groups. Data will be displayed later when a group is selected
-                            TODO: in the plugin.
-                            TODO: This data includes PAST competitions!
-                             */
-
-                            // getPlayerFromWom(), getPlayerGroups() and now getPlayerCompetitions()
-                            // are all complete, so we can use the Player* data in the UI now.
-                            // TODO: Present main panel entry point (group selector)
-
-                            statusLabel.setText("Loading succeeded");
-                            buildMainPanel();
-                        }
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-        );
-    }
-
-    private void getPlayerGroups() {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(womUrl + "/players/" + player.id + "/groups"))
-                .GET()
-                .setHeader("Content-Type", "application/json; utf-8")
-                .setHeader("Accept", "application/json")
-                .timeout(Duration.ofSeconds(20))
-                .build();
-
-        CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
-                request, HttpResponse.BodyHandlers.ofInputStream());
-
-        response.thenAccept(
-                r -> {
-                    try {
-                        if (r.statusCode() != 200) {
-
-                            BufferedReader b = new BufferedReader(new InputStreamReader(r.body()));
-                            String line;
-                            if ((line = b.readLine()) != null) {
-                                log.error("Failed: Http error code: " + r.statusCode() + ", Error: " + line);
-                            }
-
-                            // TODO: Handle case where there isn't any groups
-                            // NOTE: Using the status label for now instead of setting up the full UI.
-                            statusLabel.setText("No groups found");
-
-                            return; // skip loading competitions & ui setup
-                        }
-
-                        InputStreamReader in = new InputStreamReader(r.body());
-                        BufferedReader br = new BufferedReader(in);
-                        String line;
-
-                        if ((line = br.readLine()) != null) {
-                            PlayerGroup[] c = gson.fromJson(line, PlayerGroup[].class);
-
-                            groups.clear();
-                            groups.addAll(List.of(c));
-
-                            for (PlayerGroup g : groups) {
-                                log.info("Found group: " + g.name);
-                            }
-
-                            // TODO: Add groups to drop-down box to select "active" group
-                            // TODO: If there is only one group, use a label instead of a drop-down box.
-                            // TODO: Default group should be adjustable in settings menu and save to config file (by group ID)
-
-                            statusLabel.setText("Loading Competitions");
-
-                            // This will be the last request in the startup chain
-                            getPlayerCompetitions();
-                        }
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-        );
     }
 }

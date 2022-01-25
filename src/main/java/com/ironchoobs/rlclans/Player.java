@@ -2,7 +2,7 @@ package com.ironchoobs.rlclans;
 
 public class Player {
     public long exp;
-    public long id;
+    public int id;
     public String username;
     public String displayName;
     public String type;
