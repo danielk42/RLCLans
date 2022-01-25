@@ -17,4 +17,11 @@ RLClansConfig extends Config
 	{
 		return "Hello";
 	}
+
+	@ConfigItem(
+		keyName = "lazyLoad",
+		name = "Enable lazy loading",
+		description = "Whether to load data as it is needed or on startup"
+	)
+	default boolean lazyLoad() { return true; }
 }

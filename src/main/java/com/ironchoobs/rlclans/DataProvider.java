@@ -3,6 +3,7 @@ package com.ironchoobs.rlclans;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -17,21 +18,28 @@ import java.util.function.Consumer;
 
 @Slf4j
 // Handles getting data from Wise Old Man.
-public class WomProvider {
+public class DataProvider {
 
     // TODO: Error handler callbacks, if something goes wrong the functions will
     // TODO: not invoke their given callbacks but instead invoke error callbacks
     // TODO: passed to this class.
 
+    public enum ErrorType {
+        PLAYER_NOT_FOUND,
+        CONNECTION_ERROR,
+        GROUP_NOT_FOUND,
+        COMPETITION_NOT_FOUND,
+    }
+
     private final HttpClient httpClient;
     private final Gson gson = new Gson();
     private final String womUrl = "https://api.wiseoldman.net";
 
-    public WomProvider() {
+    public DataProvider() {
         httpClient = HttpClient.newHttpClient();
     }
 
-    public void getPlayerFromWom(String name, Consumer<Player> callback) {
+    public void getPlayerFromWom(String name, Consumer<Player> callback, Consumer<ErrorType> error) {
         // Requests to /players/username/<name> always return one result
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(womUrl + "/players/username/" + name))
@@ -95,7 +103,7 @@ public class WomProvider {
         );
     }
 
-    public void getPlayerGroups(int playerId, Consumer<List<PlayerGroup>> callback) {
+    public void getPlayerGroups(int playerId, Consumer<List<PlayerGroup>> callback, Consumer<ErrorType> error) {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(womUrl + "/players/" + playerId + "/groups"))
                 .GET()
@@ -107,7 +115,7 @@ public class WomProvider {
         CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
                 request, HttpResponse.BodyHandlers.ofInputStream());
 
-        response.thenAccept(
+        response.thenAcceptAsync(
                 r -> {
                     try {
                         if (r.statusCode() != 200) {
@@ -138,10 +146,10 @@ public class WomProvider {
                         e.printStackTrace();
                     }
                 }
-        );
+        , SwingUtilities::invokeLater);
     }
 
-    public void getPlayerCompetitions(int playerId, Consumer<List<PlayerCompetition>> callback) {
+    public void getPlayerCompetitions(int playerId, Consumer<List<PlayerCompetition>> callback, Consumer<ErrorType> error) {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(womUrl + "/players/" + playerId + "/competitions"))
                 .GET()
@@ -166,7 +174,7 @@ public class WomProvider {
 
                             // TODO: Handle case where there isn't any competitions
 
-                            return;
+                            return; // TODO: Call error handler
                         }
 
                         InputStreamReader in = new InputStreamReader(r.body());
@@ -177,6 +185,50 @@ public class WomProvider {
                             PlayerCompetition[] c = gson.fromJson(line, PlayerCompetition[].class);
 
                             callback.accept(List.of(c));
+                        }
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+        );
+    }
+
+    public void getTopMember(int groupId, Consumer<TopMember> callback, Consumer<ErrorType> error) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(womUrl + "/groups/" + groupId + "/monthly-top"))
+                .GET()
+                .setHeader("Content-Type", "application/json; utf-8")
+                .setHeader("Accept", "application/json")
+                .timeout(Duration.ofSeconds(20))
+                .build();
+
+        CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
+                request, HttpResponse.BodyHandlers.ofInputStream());
+
+        response.thenAccept(
+                r -> {
+                    try {
+                        if (r.statusCode() != 200) {
+
+                            BufferedReader b = new BufferedReader(new InputStreamReader(r.body()));
+                            String line;
+                            if ((line = b.readLine()) != null) {
+                                log.error("Failed: Http error code: " + r.statusCode() + ", Error: " + line);
+                            }
+                            // TODO: Call error handler
+                            return;
+                        }
+
+                        InputStreamReader in = new InputStreamReader(r.body());
+                        BufferedReader br = new BufferedReader(in);
+                        String line;
+
+                        if ((line = br.readLine()) != null) {
+                            TopMember c = gson.fromJson(line, TopMember.class);
+
+                            // TODO: Check we actually have some data.... for all these functions
+                            callback.accept(c);
                         }
                     }
                     catch (Exception e) {

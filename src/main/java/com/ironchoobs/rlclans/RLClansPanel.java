@@ -1,6 +1,5 @@
 package com.ironchoobs.rlclans;
 
-import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.client.game.SkillIconManager;
@@ -10,22 +9,20 @@ import net.runelite.client.ui.PluginPanel;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 class RLClansPanel extends PluginPanel {
 
     // UI
+    // Padding sizes for UI elements
+    private final Dimension headerPadding = new Dimension(0, 5); // between header and body
+    private final Dimension panelPadding = new Dimension(0, 15); // between each panel
+    private Font smallText;
+
+    private final JPanel layoutPanel = new JPanel();
 
     // Status panel
     private final JPanel statusPanel = new JPanel();            // vertical layout
@@ -51,16 +48,22 @@ class RLClansPanel extends PluginPanel {
     private OverviewPanel overviewPanel;
 
     private PanelManager panelManager;
-    private final WomProvider womProvider = new WomProvider();
+    private final DataProvider dataProvider = new DataProvider();
 
 
     // Containers for WOM data (Gson deserializes data from WOM into these)
     private Player player;
     private final ArrayList<PlayerCompetition> competitions = new ArrayList<>();
     private final ArrayList<PlayerGroup> groups = new ArrayList<>();
+    //private final ArrayList<OverviewPanel> overviewPanels = new ArrayList<>();
+    private final Map<String, OverviewPanel> overviewPanels = new HashMap<>();
+
+    private final RLClansConfig config;
 
     RLClansPanel(RLClansPlugin plugin, RLClansConfig config, Client client, SkillIconManager iconManager) {
         super();
+
+        this.config = config;
 
         // Border & layout for this PluginPanel
         setBorder(new EmptyBorder(6, 6, 6, 6));
@@ -68,17 +71,12 @@ class RLClansPanel extends PluginPanel {
         setLayout(new BorderLayout());
 
         // Main layout panel (everything is contained in this)
-        final JPanel layoutPanel = new JPanel();
         BoxLayout boxLayout = new BoxLayout(layoutPanel, BoxLayout.Y_AXIS);
         layoutPanel.setLayout(boxLayout);
         add(layoutPanel, BorderLayout.NORTH);
 
         // Font for panel names
-        Font smallText = statusLabel.getFont().deriveFont(15.0f);
-
-        // Padding sizes for UI elements
-        final Dimension headerPadding = new Dimension(0, 5); // between header and body
-        final Dimension panelPadding = new Dimension(0, 15); // between each panel
+        smallText = statusLabel.getFont().deriveFont(15.0f);
 
         // ----------------- Status Panel --------------------------------------------------
 
@@ -159,11 +157,10 @@ class RLClansPanel extends PluginPanel {
 
         // ------------------ Group Overview -----------------------------------------------
 
-        // TODO: PanelManager will own this panel + all other "data" panels
-        // TODO: as we only want one panel to display at any given time
-        overviewPanel = new OverviewPanel(smallText, headerPadding);
-        layoutPanel.add(overviewPanel);
-        overviewPanel.setVisible(true);
+        // Create OverviewPanels after loading groups, one for each group.
+        //overviewPanel = new OverviewPanel(smallText, headerPadding, dataProvider, config.lazyLoad());
+        //layoutPanel.add(overviewPanel);
+        //overviewPanel.setVisible(true);
 
         // ---------------------------------------------------------------------------------
 
@@ -186,44 +183,45 @@ class RLClansPanel extends PluginPanel {
             }
         });
 
-        // NOTE: getPlayerFromWom()'s callback MUST complete before calling other getPlayer* functions!
-
-        // NOTE: We need to know when we have all the info, for now each callback makes the next
-        // request so the last one in the chain knows that all the required data has been received
-        // and we can start doing stuff with the Player* classes
-
-        // NOTE: If we want getPlayerGroups and getPlayerCompetitions to run at the same time, keep
-        // track of when both have finished with thread safe (volatile in java???) bools.
-        // Then check in the update cycle whether both have finished and proceed with UI setup from there.
-
-        // Current setup is loggedIn -> getPlayerFromWom -> getPlayerGroups -> getPlayerCompetitions -> buildMainPanel
-
         // for testing without logging in
         loadStartupData("fartrock");
     }
 
-    protected void loadStartupData(String username) {
+    private void loadStartupData(String username) {
         // Get the startup data from WOM
-        womProvider.getPlayerFromWom(username, player -> {
+        // This chains http calls back to back and ensures each completes before the next is called.
+        // If anything fails along the way an error handler will be called and subsequent callbacks will not be invoked
+        dataProvider.getPlayerFromWom(username, player -> {
             this.player = player;
 
             statusLabel.setText("Loading Groups");
 
-            womProvider.getPlayerGroups(player.id, groups -> {
+            dataProvider.getPlayerGroups(player.id, groups -> {
                 this.groups.clear();
                 this.groups.addAll(groups);
 
-                statusLabel.setText("Loading Competitions");
+                this.overviewPanels.clear();
+                for (PlayerGroup g : groups) {
+                    OverviewPanel p = new OverviewPanel(smallText, headerPadding, dataProvider, g, config.lazyLoad());
+                    overviewPanels.put(g.name, p);
+                    layoutPanel.add(p);
+                    p.setVisible(false);
+                }
 
-                womProvider.getPlayerCompetitions(player.id, comps -> {
-                    this.competitions.clear();
-                    this.competitions.addAll(comps);
-
-                    statusLabel.setText("Load success");
-
-                    buildMainPanel();
-                });
+                statusLabel.setText("Loading complete");
+                buildMainPanel();
+            }, error -> {
+                if (error == DataProvider.ErrorType.GROUP_NOT_FOUND) {
+                    statusLabel.setText("No groups found");
+                }
+                // TODO: Connection error handling & clear groupPanels list on fail
             });
+        }, error -> {
+            if (error == DataProvider.ErrorType.PLAYER_NOT_FOUND) {
+                statusLabel.setText("Player not on WOM");
+
+                // TODO: Display button to enable sync with WOM
+            }
         });
     }
 
@@ -278,7 +276,11 @@ class RLClansPanel extends PluginPanel {
 
             clanNamesCombo.setSelectedIndex(0);  // TODO: Default group setting
             activeGroup = ((JLabel) clanNamesCombo.getSelectedItem()).getText();  // remember to set active group
+
         }
+
+        overviewPanels.get(activeGroup).setVisible(true);
+        overviewPanels.get(activeGroup).loadData();
 
         // TODO: Navigation menu
 
