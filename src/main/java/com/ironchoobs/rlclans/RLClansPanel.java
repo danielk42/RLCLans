@@ -10,10 +10,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
 
 @Slf4j
 class RLClansPanel extends PluginPanel {
@@ -40,26 +38,10 @@ class RLClansPanel extends PluginPanel {
     private final JComboBox<JLabel> navCombo = new JComboBox<>();
 
     // Group selection panel
-    private final GroupSelectPanel groupPanel;
-    //private final JPanel groupSelectPanel = new JPanel();
-    //private final JPanel groupSelectPanelHeader = new JPanel();
-    //private final JPanel groupSelectPanelBody = new JPanel();
-    //private final JComboBox<JLabel> clanNamesCombo = new JComboBox<>();
-    //private final JLabel clanNameLabel = new JLabel();
-    //private String activeGroup;
+    private GroupSelectPanel groupPanel = null;
 
-    // Group overview panel
-    //private OverviewPanel overviewPanel;
-
-    //private PanelManager panelManager;
     private final DataProvider dataProvider = DataProvider.instance();
 
-
-    // Containers for WOM data (Gson deserializes data from WOM into these)
-    private Player player;
-    //private final ArrayList<PlayerCompetition> competitions = new ArrayList<>();
-    private final ArrayList<PlayerGroup> groups = new ArrayList<>();
-    //private final ArrayList<OverviewPanel> overviewPanels = new ArrayList<>();
     private final Map<String, OverviewPanel> overviewPanels = new HashMap<>();
     private OverviewPanel activeOverviewPanel = null;
 
@@ -71,8 +53,7 @@ class RLClansPanel extends PluginPanel {
         this.config = config;
 
         // Border & layout for this PluginPanel
-        //setBorder(new EmptyBorder(6, 6, 6, 6));
-        setBorder(new LineBorder(Color.WHITE, 1)); // testing
+        setBorder(new EmptyBorder(6, 6, 6, 6));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new BorderLayout());
 
@@ -116,29 +97,25 @@ class RLClansPanel extends PluginPanel {
         // ------------------ Group Selector -----------------------------------------------
 
 
-        groupPanel = new GroupSelectPanel(smallText, name -> {
+        groupPanel = new GroupSelectPanel(smallText, group -> {
             if (activeOverviewPanel != null) {
                 activeOverviewPanel.setVisible(false);
             }
-            if (overviewPanels.containsKey(name)) {
-                overviewPanels.get(name).setVisible(true);
+            if (overviewPanels.containsKey(group.name)) {
+                overviewPanels.get(group.name).setVisible(true);
             }
             else {
-                for (PlayerGroup g : groups) {
-                   if (g.name.compareTo(name) == 0) {
-                       activeOverviewPanel = new OverviewPanel(
-                           smallText, headerPadding, g, config.lazyLoad());
-                       overviewPanels.put(name, activeOverviewPanel);
-                       activeOverviewPanel.setVisible(true);
+                activeOverviewPanel = new OverviewPanel(
+                        smallText, headerPadding, group, config.lazyLoad());
+                overviewPanels.put(group.name, activeOverviewPanel);
+                activeOverviewPanel.setVisible(true);
 
-                       dataPanel.add(activeOverviewPanel);
+                dataPanel.add(activeOverviewPanel);
 
-                       // TODO: Add other data panels here
-
-                       return;
-                   }
-               }
+                // TODO: Add other data panels here
            }
+
+            statusLabel.setText("Ready");
         });
 
         layoutPanel.add(groupPanel);
@@ -154,11 +131,12 @@ class RLClansPanel extends PluginPanel {
     }
 
     private void loadStartupData(String username) {
+        statusLabel.setText("Loading Player");
+
         // Get the startup data from WOM
         // This chains http calls back to back and ensures each completes before the next is called.
         // If anything fails along the way an error handler will be called and subsequent callbacks will not be invoked
         dataProvider.getPlayerFromWom(username, player -> {
-            this.player = player;
             statusLabel.setText("Loading Groups");
             groupPanel.setup(player);
         }, error -> {
@@ -184,10 +162,6 @@ class RLClansPanel extends PluginPanel {
         dataPanel.removeAll();
         overviewPanels.clear();
         // Clear other panel lists here
-
-        // supposedly required when adding/removing components after startup...
-        //dataPanel.revalidate();
-        //dataPanel.repaint();
 
         loadStartupData(client.getUsername());
     }

@@ -1,6 +1,7 @@
 package com.ironchoobs.rlclans;
 
 import javax.swing.*;
+import javax.swing.border.LineBorder;
 import java.awt.*;
 
 public class CollapsiblePanel extends JPanel {
@@ -16,6 +17,7 @@ public class CollapsiblePanel extends JPanel {
 
         //button.setIcon()
         button.setText("Expand");
+        body.setVisible(false);
 
         button.addActionListener(evt -> {
             setCollapsed((collapsed = !collapsed));
@@ -30,6 +32,9 @@ public class CollapsiblePanel extends JPanel {
         this.add(header);
         this.add(Box.createRigidArea(new Dimension(0, 5)));
         this.add(body);
+
+        //testing
+        this.setBorder(new LineBorder(Color.WHITE, 1));
     }
 
     public void setCollapsed(boolean collapsed) {
