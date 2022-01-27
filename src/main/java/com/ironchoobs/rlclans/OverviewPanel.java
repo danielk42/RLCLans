@@ -1,6 +1,7 @@
 package com.ironchoobs.rlclans;
 
 import javax.swing.*;
+import javax.swing.border.LineBorder;
 import java.awt.*;
 
 /*
@@ -15,15 +16,16 @@ public class OverviewPanel extends JPanel {
 
     private final JPanel headerPanel = new JPanel();
     private final JPanel bodyPanel = new JPanel();
-    private final DataProvider dataProvider;
+    private final DataProvider dataProvider = DataProvider.instance();
     private final JLabel errorLabel = new JLabel();
+    private final JLabel topPlayer = new JLabel();
+    private final JLabel topPlayerGained = new JLabel();
     private final PlayerGroup group;
     private boolean loaded = false;
 
-    public OverviewPanel(Font headerFont, Dimension padding, DataProvider provider, PlayerGroup group, boolean lazyLoad) {
+    public OverviewPanel(Font headerFont, Dimension padding, PlayerGroup group, boolean lazyLoad) {
         super();
 
-        dataProvider = provider;
         this.group = group;
 
         this.setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
@@ -34,7 +36,23 @@ public class OverviewPanel extends JPanel {
         headerPanel.add(label);
         headerPanel.add(Box.createHorizontalGlue());
 
-        bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.LINE_AXIS));
+        bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.PAGE_AXIS));
+
+        JPanel topPanelLayout = new JPanel();
+        topPanelLayout.setLayout(new BoxLayout(topPanelLayout, BoxLayout.LINE_AXIS));
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.PAGE_AXIS));
+        JLabel topLabel = new JLabel("Monthly Top Player");
+        topLabel.setFont(headerFont);
+
+        topPanel.add(topLabel);
+        topPanel.add(topPlayer);
+        topPanel.add(topPlayerGained);
+        topPanelLayout.add(topPanel);
+        topPanelLayout.add(Box.createHorizontalGlue());
+        bodyPanel.add(topPanelLayout);
+
+        topPanelLayout.setVisible(false);
 
         errorLabel.setVisible(false);
 
@@ -44,6 +62,9 @@ public class OverviewPanel extends JPanel {
         this.add(Box.createVerticalGlue());
         this.add(errorLabel);
 
+        // for testing
+        this.setBorder(new LineBorder(Color.WHITE, 1));
+
         // Overview elements here
 
         if (!lazyLoad) {
@@ -51,21 +72,31 @@ public class OverviewPanel extends JPanel {
         }
     }
 
+    @Override
+    public void setVisible(boolean visible) {
+        super.setVisible(visible);
+        loadData();
+    }
+
     // Can be called multiple times, but will only try to load data again if it failed last time.
-    public void loadData() {
+    private void loadData() {
         if (!loaded) {
             errorLabel.setVisible(true);
             errorLabel.setText("Loading");
 
             loaded = true; // say we loaded already so we don't try to load twice
             dataProvider.getTopMember(group.id, tm -> {
-                // Setup UI stuff
+                // TODO: Setup Top Member UI elements
+
+                topPlayer.setText(tm.player.username);
+                topPlayerGained.setText(tm.gained + " xp");
 
                 errorLabel.setVisible(false);
 
             }, error -> {
                 errorLabel.setText("Error loading top member");
                 loaded = false; // Didn't load, will try again if loadData is called again
+                // TODO: Refresh button
             });
         }
     }

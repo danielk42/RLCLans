@@ -31,11 +31,14 @@ public class DataProvider {
         COMPETITION_NOT_FOUND,
     }
 
+    private static final DataProvider d = new DataProvider();
+    public static DataProvider instance() { return d; }
+
     private final HttpClient httpClient;
     private final Gson gson = new Gson();
     private final String womUrl = "https://api.wiseoldman.net";
 
-    public DataProvider() {
+    private DataProvider() {
         httpClient = HttpClient.newHttpClient();
     }
 
@@ -126,8 +129,9 @@ public class DataProvider {
                                 log.error("Failed: Http error code: " + r.statusCode() + ", Error: " + line);
                             }
 
-                            // TODO: Handle case where there isn't any groups
-                            // TODO: No groups should pass an empty array to callback
+                            if (r.statusCode() == 404) {
+                                error.accept(ErrorType.GROUP_NOT_FOUND);
+                            }
 
                             return;
                         }
@@ -206,7 +210,7 @@ public class DataProvider {
         CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
                 request, HttpResponse.BodyHandlers.ofInputStream());
 
-        response.thenAccept(
+        response.thenAcceptAsync(
                 r -> {
                     try {
                         if (r.statusCode() != 200) {
@@ -235,6 +239,6 @@ public class DataProvider {
                         e.printStackTrace();
                     }
                 }
-        );
+        , SwingUtilities::invokeLater);
     }
 }
