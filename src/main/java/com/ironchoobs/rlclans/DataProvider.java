@@ -8,12 +8,11 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.net.http.*;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 
 @Slf4j
@@ -116,7 +115,14 @@ public class DataProvider {
                 .build();
 
         CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
-                request, HttpResponse.BodyHandlers.ofInputStream());
+                request, HttpResponse.BodyHandlers.ofInputStream())
+                .exceptionallyAsync(ex -> {
+                    if (ex instanceof CompletionException) {
+                        log.error("Completion exception occurred");
+                        log.error(ex.getCause().toString());
+                    }
+                    return null;
+                }, SwingUtilities::invokeLater);
 
         response.thenAcceptAsync(
                 r -> {
@@ -145,6 +151,10 @@ public class DataProvider {
 
                             callback.accept(List.of(c));
                         }
+                    }
+                    catch (NullPointerException e) {
+                        // Called if http request failed (ie timed out)
+                        error.accept(ErrorType.CONNECTION_ERROR);
                     }
                     catch (Exception e) {
                         e.printStackTrace();

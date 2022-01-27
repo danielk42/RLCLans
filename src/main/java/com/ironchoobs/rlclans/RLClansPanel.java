@@ -106,7 +106,7 @@ class RLClansPanel extends PluginPanel {
             }
             else {
                 activeOverviewPanel = new OverviewPanel(
-                        smallText, headerPadding, group, config.lazyLoad());
+                        smallText, group, config.lazyLoad());
                 overviewPanels.put(group.name, activeOverviewPanel);
                 activeOverviewPanel.setVisible(true);
 

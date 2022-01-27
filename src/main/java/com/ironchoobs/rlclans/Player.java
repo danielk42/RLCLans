@@ -1,5 +1,7 @@
 package com.ironchoobs.rlclans;
 
+import java.util.Date;
+
 public class Player {
     public long exp;
     public int id;
@@ -13,10 +15,10 @@ public class Player {
     public float ehb;
     public float ttm;
     public float tt200m;
-    public String lastImportedAt;
-    public String lastChangedAt;
-    public String registeredAt;
-    public String updatedAt;
+    public Date lastImportedAt;
+    public Date lastChangedAt;
+    public Date registeredAt;
+    public Date updatedAt;
 
     Player() {}
 }

@@ -12,10 +12,8 @@ When lazy loading, panels should display a loading message and then store the da
 Panels should provide a refresh button where applicable.
  */
 
-public class OverviewPanel extends JPanel {
+public class OverviewPanel extends CollapsiblePanel {
 
-    private final JPanel headerPanel = new JPanel();
-    private final JPanel bodyPanel = new JPanel();
     private final DataProvider dataProvider = DataProvider.instance();
     private final JLabel errorLabel = new JLabel();
     private final JLabel topPlayer = new JLabel();
@@ -23,22 +21,20 @@ public class OverviewPanel extends JPanel {
     private final PlayerGroup group;
     private boolean loaded = false;
 
-    public OverviewPanel(Font headerFont, Dimension padding, PlayerGroup group, boolean lazyLoad) {
+    private final JPanel topPanelLayout = new JPanel();
+
+    public OverviewPanel(Font headerFont, PlayerGroup group, boolean lazyLoad) {
         super();
 
         this.group = group;
 
         this.setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
 
-        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.LINE_AXIS));
         JLabel label = new JLabel("Group Overview");
         label.setFont(headerFont);
-        headerPanel.add(label);
-        headerPanel.add(Box.createHorizontalGlue());
+        header.add(label);
+        header.add(Box.createHorizontalGlue());
 
-        bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.PAGE_AXIS));
-
-        JPanel topPanelLayout = new JPanel();
         topPanelLayout.setLayout(new BoxLayout(topPanelLayout, BoxLayout.LINE_AXIS));
         JPanel topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.PAGE_AXIS));
@@ -49,18 +45,12 @@ public class OverviewPanel extends JPanel {
         topPanel.add(topPlayer);
         topPanel.add(topPlayerGained);
         topPanelLayout.add(topPanel);
-        topPanelLayout.add(Box.createHorizontalGlue());
-        bodyPanel.add(topPanelLayout);
+        //topPanelLayout.add(Box.createHorizontalGlue());
+        body.add(topPanelLayout);
 
         topPanelLayout.setVisible(false);
 
-        errorLabel.setVisible(false);
-
-        this.add(headerPanel);
-        this.add(Box.createRigidArea(padding));
-        this.add(bodyPanel);
-        this.add(Box.createVerticalGlue());
-        this.add(errorLabel);
+        body.add(errorLabel);
 
         // for testing
         this.setBorder(new LineBorder(Color.WHITE, 1));
@@ -73,8 +63,8 @@ public class OverviewPanel extends JPanel {
     }
 
     @Override
-    public void setVisible(boolean visible) {
-        super.setVisible(visible);
+    public void setCollapsed(boolean collapsed) {
+        super.setCollapsed(collapsed);
         loadData();
     }
 
@@ -90,6 +80,7 @@ public class OverviewPanel extends JPanel {
 
                 topPlayer.setText(tm.player.username);
                 topPlayerGained.setText(tm.gained + " xp");
+                topPanelLayout.setVisible(true);
 
                 errorLabel.setVisible(false);
 
