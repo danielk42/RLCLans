@@ -108,7 +108,7 @@ class RLClansPanel extends PluginPanel {
                 activeOverviewPanel = new OverviewPanel(
                         smallText, group, config.lazyLoad());
                 overviewPanels.put(group.name, activeOverviewPanel);
-                activeOverviewPanel.setVisible(true);
+                activeOverviewPanel.setCollapsed(false);
 
                 dataPanel.add(activeOverviewPanel);
 
@@ -119,6 +119,7 @@ class RLClansPanel extends PluginPanel {
         });
 
         layoutPanel.add(groupPanel);
+        layoutPanel.add(Box.createRigidArea(panelPadding));
 
         // ---------------------------------------------------------------------------------
 

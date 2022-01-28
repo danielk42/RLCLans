@@ -52,7 +52,16 @@ public class DataProvider {
                 .build();
 
         CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
-                request, HttpResponse.BodyHandlers.ofInputStream());
+                request, HttpResponse.BodyHandlers.ofInputStream())
+                .exceptionallyAsync(ex -> {
+                    if (ex.getCause() instanceof HttpTimeoutException) {
+                        log.info("Http timeout in getPlayerFromWom");
+                    }
+                    else {
+                        log.error("Unknown http error in getPlayerFromWom: " + ex.getCause().toString());
+                    }
+                    return null;
+                }, SwingUtilities::invokeLater);
 
         response.thenAccept(
                 r -> {
@@ -76,7 +85,8 @@ public class DataProvider {
                             // If we always get a 404 if player isn't in WOM database then we can prompt to
                             // add the account.
                             if (r.statusCode() == 404) {
-                                log.error("404 error fetching player data from WOM");
+                                //log.error("404 error fetching player data from WOM");
+                                error.accept(ErrorType.PLAYER_NOT_FOUND);
                             }
 
                             return;
@@ -98,6 +108,9 @@ public class DataProvider {
                             callback.accept(player);
                         }
                     }
+                    catch (NullPointerException e) {
+                        error.accept(ErrorType.CONNECTION_ERROR);
+                    }
                     catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -117,9 +130,11 @@ public class DataProvider {
         CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
                 request, HttpResponse.BodyHandlers.ofInputStream())
                 .exceptionallyAsync(ex -> {
-                    if (ex instanceof CompletionException) {
-                        log.error("Completion exception occurred");
-                        log.error(ex.getCause().toString());
+                    if (ex.getCause() instanceof HttpTimeoutException) {
+                        log.info("Http timeout in getPlayerGroups");
+                    }
+                    else {
+                        log.error("Unknown http error in getPlayerGroups: " + ex.getCause().toString());
                     }
                     return null;
                 }, SwingUtilities::invokeLater);
@@ -173,7 +188,16 @@ public class DataProvider {
                 .build();
 
         CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
-                request, HttpResponse.BodyHandlers.ofInputStream());
+                request, HttpResponse.BodyHandlers.ofInputStream())
+                .exceptionallyAsync(ex -> {
+                    if (ex.getCause() instanceof HttpTimeoutException) {
+                        log.info("Http timeout in getPlayerCompetitions");
+                    }
+                    else {
+                        log.error("Unknown http error in getPlayerCompetitions: " + ex.getCause().toString());
+                    }
+                    return null;
+                }, SwingUtilities::invokeLater);
 
         response.thenAccept(
                 r -> {
@@ -186,9 +210,11 @@ public class DataProvider {
                                 log.error("Failed: Http error code: " + r.statusCode() + ", Error: " + line);
                             }
 
-                            // TODO: Handle case where there isn't any competitions
+                            if (r.statusCode() == 404) {
+                                error.accept(ErrorType.COMPETITION_NOT_FOUND);
+                            }
 
-                            return; // TODO: Call error handler
+                            return;
                         }
 
                         InputStreamReader in = new InputStreamReader(r.body());
@@ -200,6 +226,9 @@ public class DataProvider {
 
                             callback.accept(List.of(c));
                         }
+                    }
+                    catch (NullPointerException e) {
+                        error.accept(ErrorType.CONNECTION_ERROR);
                     }
                     catch (Exception e) {
                         e.printStackTrace();
@@ -214,11 +243,20 @@ public class DataProvider {
                 .GET()
                 .setHeader("Content-Type", "application/json; utf-8")
                 .setHeader("Accept", "application/json")
-                .timeout(Duration.ofSeconds(20))
+                .timeout(Duration.ofSeconds(10))
                 .build();
 
         CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
-                request, HttpResponse.BodyHandlers.ofInputStream());
+                request, HttpResponse.BodyHandlers.ofInputStream())
+                .exceptionallyAsync(ex -> {
+                    if (ex.getCause() instanceof HttpTimeoutException) {
+                        log.info("Http timeout in getTopMember");
+                    }
+                    else {
+                        log.error("Unknown http error in getTopMember: " + ex.getCause().toString());
+                    }
+                    return null;
+                }, SwingUtilities::invokeLater);
 
         response.thenAcceptAsync(
                 r -> {
@@ -244,6 +282,9 @@ public class DataProvider {
                             // TODO: Check we actually have some data.... for all these functions
                             callback.accept(c);
                         }
+                    }
+                    catch (NullPointerException e) {
+                        error.accept(ErrorType.CONNECTION_ERROR);
                     }
                     catch (Exception e) {
                         e.printStackTrace();

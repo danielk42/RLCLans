@@ -43,11 +43,14 @@ public class GroupSelectPanel extends CollapsiblePanel {
         groupList.getSelectionModel().addListSelectionListener(evt -> {
             ListSelectionModel m = (ListSelectionModel) evt.getSource();
             if (!m.isSelectionEmpty()) {
-                callback.accept(groups.get((String) groupList.getSelectedValue()));
+                callback.accept(groups.get(groupList.getSelectedValue()));
             }
         });
 
         // TODO: Store group ID and return the ID in callback instead of name
+
+        // default expanded
+        setCollapsed(false);
     }
 
     // Call when logging in. Can be called again when re-logging.
