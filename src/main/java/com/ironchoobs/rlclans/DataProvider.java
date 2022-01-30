@@ -10,9 +10,9 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.http.*;
 import java.time.Duration;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 
 @Slf4j
@@ -63,7 +63,7 @@ public class DataProvider {
                     return null;
                 }, SwingUtilities::invokeLater);
 
-        response.thenAccept(
+        response.thenAcceptAsync(
                 r -> {
                     try {
                         if (r.statusCode() != 200) {
@@ -115,7 +115,7 @@ public class DataProvider {
                         e.printStackTrace();
                     }
                 }
-        );
+        , SwingUtilities::invokeLater);
     }
 
     public void getPlayerGroups(int playerId, Consumer<List<PlayerGroup>> callback, Consumer<ErrorType> error) {
@@ -199,7 +199,7 @@ public class DataProvider {
                     return null;
                 }, SwingUtilities::invokeLater);
 
-        response.thenAccept(
+        response.thenAcceptAsync(
                 r -> {
                     try {
                         if (r.statusCode() != 200) {
@@ -234,7 +234,7 @@ public class DataProvider {
                         e.printStackTrace();
                     }
                 }
-        );
+        , SwingUtilities::invokeLater);
     }
 
     public void getTopMember(int groupId, Consumer<TopMember> callback, Consumer<ErrorType> error) {
@@ -278,6 +278,185 @@ public class DataProvider {
 
                         if ((line = br.readLine()) != null) {
                             TopMember c = gson.fromJson(line, TopMember.class);
+
+                            // TODO: Check we actually have some data.... for all these functions
+                            callback.accept(c);
+                        }
+                    }
+                    catch (NullPointerException e) {
+                        error.accept(ErrorType.CONNECTION_ERROR);
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+        , SwingUtilities::invokeLater);
+    }
+
+    // Period based leaderboard (see WomPeriod)
+    public void getGroupLeaderboard(int groupId, WomMetric metric, WomPeriod period, int limit, int offset,
+                                     Consumer<LeaderboardEntry[]> callback, Consumer<ErrorType> error) {
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(womUrl + "/groups/" + groupId + "/gained?metric="
+                    + metric + "&period=" + period + "&limit=" + limit + "&offset=" + offset))
+                .GET()
+                .setHeader("Content-Type", "application/json; utf-8")
+                .setHeader("Accept", "application/json")
+                .timeout(Duration.ofSeconds(20))
+                .build();
+
+        CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
+                        request, HttpResponse.BodyHandlers.ofInputStream())
+                .exceptionallyAsync(ex -> {
+                    if (ex.getCause() instanceof HttpTimeoutException) {
+                        log.info("Http timeout in getGroupLeaderboard");
+                    }
+                    else {
+                        log.error("Unknown http error in getGroupLeaderboard: " + ex.getCause().toString());
+                    }
+                    return null;
+                }, SwingUtilities::invokeLater);
+
+        response.thenAcceptAsync(
+                r -> {
+                    try {
+                        if (r.statusCode() != 200) {
+
+                            BufferedReader b = new BufferedReader(new InputStreamReader(r.body()));
+                            String line;
+                            if ((line = b.readLine()) != null) {
+                                log.error("Failed: Http error code: " + r.statusCode() + ", Error: " + line);
+                            }
+                            // TODO: error handling
+                            return;
+                        }
+
+                        InputStreamReader in = new InputStreamReader(r.body());
+                        BufferedReader br = new BufferedReader(in);
+                        String line;
+
+                        if ((line = br.readLine()) != null) {
+                            LeaderboardEntry[] c = gson.fromJson(line, LeaderboardEntry[].class);
+
+                            // TODO: Check we actually have some data.... for all these functions
+                            callback.accept(c);
+                        }
+                    }
+                    catch (NullPointerException e) {
+                        error.accept(ErrorType.CONNECTION_ERROR);
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+        , SwingUtilities::invokeLater);
+    }
+
+    // Date based leaderboard
+    public void getGroupLeaderboard(int groupId, WomMetric metric, Date startDate, Date endDate, int limit, int offset,
+                                    Consumer<LeaderboardEntry[]> callback, Consumer<ErrorType> error) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(womUrl + "/groups/" + groupId + "/gained?metric="
+                        + metric + "&startDate=" + gson.toJson(startDate) + "&endDate=" + gson.toJson(endDate)
+                        + "&limit=" + limit + "&offset=" + offset))
+                .GET()
+                .setHeader("Content-Type", "application/json; utf-8")
+                .setHeader("Accept", "application/json")
+                .timeout(Duration.ofSeconds(20))
+                .build();
+
+        CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
+                        request, HttpResponse.BodyHandlers.ofInputStream())
+                .exceptionallyAsync(ex -> {
+                    if (ex.getCause() instanceof HttpTimeoutException) {
+                        log.info("Http timeout in getGroupLeaderboard");
+                    }
+                    else {
+                        log.error("Unknown http error in getGroupLeaderboard: " + ex.getCause().toString());
+                    }
+                    return null;
+                }, SwingUtilities::invokeLater);
+
+        response.thenAcceptAsync(
+                r -> {
+                    try {
+                        if (r.statusCode() != 200) {
+
+                            BufferedReader b = new BufferedReader(new InputStreamReader(r.body()));
+                            String line;
+                            if ((line = b.readLine()) != null) {
+                                log.error("Failed: Http error code: " + r.statusCode() + ", Error: " + line);
+                            }
+                            // TODO: error handling
+                            return;
+                        }
+
+                        InputStreamReader in = new InputStreamReader(r.body());
+                        BufferedReader br = new BufferedReader(in);
+                        String line;
+
+                        if ((line = br.readLine()) != null) {
+                            LeaderboardEntry[] c = gson.fromJson(line, LeaderboardEntry[].class);
+
+                            // TODO: Check we actually have some data.... for all these functions
+                            callback.accept(c);
+                        }
+                    }
+                    catch (NullPointerException e) {
+                        error.accept(ErrorType.CONNECTION_ERROR);
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+        , SwingUtilities::invokeLater);
+    }
+
+    public void getRecentAchievements(int groupId, int limit, int offset,
+                                      Consumer<PlayerAchievement[]> callback,
+                                      Consumer<ErrorType> error) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(womUrl + "/groups/" + groupId + "/achievements?limit="
+                    + limit + "&offset=" + offset))
+                .GET()
+                .setHeader("Content-Type", "application/json; utf-8")
+                .setHeader("Accept", "application/json")
+                .timeout(Duration.ofSeconds(20))
+                .build();
+
+        CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
+                        request, HttpResponse.BodyHandlers.ofInputStream())
+                .exceptionallyAsync(ex -> {
+                    if (ex.getCause() instanceof HttpTimeoutException) {
+                        log.info("Http timeout in getRecentAchievements");
+                    }
+                    else {
+                        log.error("Unknown http error in getRecentAchievements: " + ex.getCause().toString());
+                    }
+                    return null;
+                }, SwingUtilities::invokeLater);
+
+        response.thenAcceptAsync(
+                r -> {
+                    try {
+                        if (r.statusCode() != 200) {
+
+                            BufferedReader b = new BufferedReader(new InputStreamReader(r.body()));
+                            String line;
+                            if ((line = b.readLine()) != null) {
+                                log.error("Failed: Http error code: " + r.statusCode() + ", Error: " + line);
+                            }
+                            // TODO: error handling
+                            return;
+                        }
+
+                        InputStreamReader in = new InputStreamReader(r.body());
+                        BufferedReader br = new BufferedReader(in);
+                        String line;
+
+                        if ((line = br.readLine()) != null) {
+                            PlayerAchievement[] c = gson.fromJson(line, PlayerAchievement[].class);
 
                             // TODO: Check we actually have some data.... for all these functions
                             callback.accept(c);

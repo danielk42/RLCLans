@@ -15,13 +15,10 @@ Panels should provide a refresh button where applicable.
 public class OverviewPanel extends CollapsiblePanel {
 
     private final DataProvider dataProvider = DataProvider.instance();
-    private final JLabel errorLabel = new JLabel();
-    private final JLabel topPlayer = new JLabel();
-    private final JLabel topPlayerGained = new JLabel();
     private final PlayerGroup group;
-    private boolean loaded = false;
 
-    private final JPanel topPanelLayout = new JPanel();
+    private final LeaderboardPanel topDailyGainsPanel;
+    private final RecentAchievementsPanel recentAchievementsPanel;
 
     public OverviewPanel(Font headerFont, PlayerGroup group, boolean lazyLoad) {
         super();
@@ -35,22 +32,30 @@ public class OverviewPanel extends CollapsiblePanel {
         header.add(label);
         header.add(Box.createHorizontalGlue());
 
-        topPanelLayout.setLayout(new BoxLayout(topPanelLayout, BoxLayout.LINE_AXIS));
-        JPanel topPanel = new JPanel();
-        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.PAGE_AXIS));
-        JLabel topLabel = new JLabel("Monthly Top Player");
-        topLabel.setFont(headerFont);
+        JPanel tdgLabelPanel = new JPanel();
+        tdgLabelPanel.setLayout(new BoxLayout(tdgLabelPanel, BoxLayout.LINE_AXIS));
+        JLabel tdgLabel = new JLabel("Top Gains Today");
+        tdgLabel.setFont(headerFont);
+        tdgLabelPanel.add(Box.createHorizontalGlue());
+        tdgLabelPanel.add(tdgLabel);
+        tdgLabelPanel.add(Box.createHorizontalGlue());
+        body.add(tdgLabelPanel);
+        topDailyGainsPanel = new LeaderboardPanel(group.id,
+                WomMetric.overall, WomPeriod.day, 3, PanelAlignment.LEFT);
+        body.add(topDailyGainsPanel);
 
-        topPanel.add(topLabel);
-        topPanel.add(topPlayer);
-        topPanel.add(topPlayerGained);
-        topPanelLayout.add(topPanel);
-        //topPanelLayout.add(Box.createHorizontalGlue());
-        body.add(topPanelLayout);
+        body.add(Box.createRigidArea(new Dimension(0, 5)));
 
-        topPanelLayout.setVisible(false);
-
-        body.add(errorLabel);
+        JPanel recentAchLabelPanel = new JPanel();
+        recentAchLabelPanel.setLayout(new BoxLayout(recentAchLabelPanel, BoxLayout.LINE_AXIS));
+        JLabel achLabel = new JLabel("Recent Achievements");
+        achLabel.setFont(headerFont);
+        recentAchLabelPanel.add(Box.createHorizontalGlue());
+        recentAchLabelPanel.add(achLabel);
+        recentAchLabelPanel.add(Box.createHorizontalGlue());
+        body.add(recentAchLabelPanel);
+        recentAchievementsPanel = new RecentAchievementsPanel(group.id, 5);
+        body.add(recentAchievementsPanel);
 
         // for testing
         this.setBorder(new LineBorder(Color.WHITE, 1));
@@ -60,51 +65,31 @@ public class OverviewPanel extends CollapsiblePanel {
         if (!lazyLoad) {
             loadData();
         }
+
+        // TODO: Add refresh button to reload all data
     }
 
     @Override
     public void setCollapsed(boolean collapsed) {
         super.setCollapsed(collapsed);
-        loadData();
+        if (!collapsed) {
+            loadData();
+        }
+
+        // TODO: Refresh button on this panel should call refresh() on child LeaderboardPanels
+
+        // TODO: Reload button should call loadData()
     }
 
     // Can be called multiple times, but will only try to load data again if it failed last time.
     private void loadData() {
-        if (!loaded) {
-            errorLabel.setVisible(true);
-            errorLabel.setText("Loading");
-
-            loaded = true; // say we loaded already so we don't try to load twice
-            dataProvider.getTopMember(group.id, tm -> {
-                // TODO: Setup Top Member UI elements
-
-                topPlayer.setText(tm.player.username);
-                topPlayerGained.setText(tm.gained + " xp");
-                topPanelLayout.setVisible(true);
-
-                errorLabel.setVisible(false);
-
-            }, error -> {
-                errorLabel.setText("Error loading top member");
-                loaded = false; // Didn't load, will try again if loadData is called again
-                // TODO: Refresh button
-            });
-        }
+        topDailyGainsPanel.loadData();
+        recentAchievementsPanel.loadData();
     }
 
-    // Call to reload data
-    public void reload() {
-        loaded = false;
-        loadData();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == this) { return true; }
-
-        if (o instanceof String) {
-            return ((String) o).compareTo(group.name) == 0;
-        }
-        return false;
+    // Call to reload all data
+    public void refresh() {
+        topDailyGainsPanel.refresh();
+        recentAchievementsPanel.refresh();
     }
 }
