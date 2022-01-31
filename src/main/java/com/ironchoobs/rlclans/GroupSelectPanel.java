@@ -26,8 +26,6 @@ public class GroupSelectPanel extends CollapsiblePanel {
 
         this.callback = activeGroupChanged;
 
-        this.setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
-
         JLabel headerLabel = new JLabel("Group");
         headerLabel.setFont(headerFont);
         header.add(headerLabel);

@@ -25,8 +25,6 @@ public class OverviewPanel extends CollapsiblePanel {
 
         this.group = group;
 
-        this.setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
-
         JLabel label = new JLabel("Group Overview");
         label.setFont(headerFont);
         header.add(label);
