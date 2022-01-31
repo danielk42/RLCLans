@@ -20,7 +20,7 @@ public class OverviewPanel extends CollapsiblePanel {
     private final LeaderboardPanel topDailyGainsPanel;
     private final RecentAchievementsPanel recentAchievementsPanel;
 
-    public OverviewPanel(Font headerFont, PlayerGroup group, boolean lazyLoad) {
+    public OverviewPanel(Font headerFont, PlayerGroup group, Player player, boolean lazyLoad) {
         super();
 
         this.group = group;
@@ -31,6 +31,29 @@ public class OverviewPanel extends CollapsiblePanel {
         label.setFont(headerFont);
         header.add(label);
         header.add(Box.createHorizontalGlue());
+
+        JPanel statsPanel = new JPanel();
+        statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.PAGE_AXIS));
+        JPanel statsLabelPanel = new JPanel();
+        statsLabelPanel.setLayout(new BoxLayout(statsLabelPanel, BoxLayout.LINE_AXIS));
+        JLabel statsPanelLabel = new JLabel("Stats");
+        statsPanelLabel.setFont(headerFont);
+        statsLabelPanel.add(Box.createHorizontalGlue());
+        statsLabelPanel.add(statsPanelLabel);
+        statsLabelPanel.add(Box.createHorizontalGlue());
+        statsPanel.add(statsLabelPanel);
+
+        // TODO: Display date only (without time)
+        // TODO: Find a way to get ACTUAL clan join date from client
+        JLabel joinedLabel = new JLabel("Joined " + player.registeredAt);
+        JPanel joinedLabelPanel = new JPanel();
+        joinedLabelPanel.setLayout(new BoxLayout(joinedLabelPanel, BoxLayout.LINE_AXIS));
+        joinedLabelPanel.add(joinedLabel);
+        joinedLabelPanel.add(Box.createHorizontalGlue());
+        statsPanel.add(joinedLabelPanel);
+
+
+        body.add(statsPanel);
 
         JPanel tdgLabelPanel = new JPanel();
         tdgLabelPanel.setLayout(new BoxLayout(tdgLabelPanel, BoxLayout.LINE_AXIS));

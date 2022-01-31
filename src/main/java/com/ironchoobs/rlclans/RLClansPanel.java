@@ -45,6 +45,8 @@ class RLClansPanel extends PluginPanel {
     private final Map<String, OverviewPanel> overviewPanels = new HashMap<>();
     private OverviewPanel activeOverviewPanel = null;
 
+    private Player player = null;
+
     private final RLClansConfig config;
 
     RLClansPanel(RLClansPlugin plugin, RLClansConfig config, Client client, SkillIconManager iconManager) {
@@ -106,7 +108,7 @@ class RLClansPanel extends PluginPanel {
             }
             else {
                 activeOverviewPanel = new OverviewPanel(
-                        smallText, group, config.lazyLoad());
+                        smallText, group, player, config.lazyLoad());
                 overviewPanels.put(group.name, activeOverviewPanel);
                 activeOverviewPanel.setCollapsed(false);
 
@@ -139,6 +141,7 @@ class RLClansPanel extends PluginPanel {
         // If anything fails along the way an error handler will be called and subsequent callbacks will not be invoked
         dataProvider.getPlayerFromWom(username, player -> {
             statusLabel.setText("Loading Groups");
+            this.player = player;
             groupPanel.setup(player);
         }, error -> {
             if (error == DataProvider.ErrorType.PLAYER_NOT_FOUND) {
