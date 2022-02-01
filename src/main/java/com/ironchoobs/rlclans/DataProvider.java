@@ -179,6 +179,7 @@ public class DataProvider {
         , SwingUtilities::invokeLater);
     }
 
+    // Get the competitions that a player is involved in
     public void getPlayerCompetitions(int playerId, Consumer<List<PlayerCompetition>> callback, Consumer<ErrorType> error) {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(womUrl + "/players/" + playerId + "/competitions"))
@@ -226,6 +227,66 @@ public class DataProvider {
                             PlayerCompetition[] c = gson.fromJson(line, PlayerCompetition[].class);
 
                             callback.accept(List.of(c));
+                        }
+                    }
+                    catch (NullPointerException e) {
+                        error.accept(ErrorType.CONNECTION_ERROR);
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+        , SwingUtilities::invokeLater);
+    }
+
+    // Get details of a competition given its ID
+    // TODO: WOM has 2 types of competition, "classic" and "team". Team competitions have an extra variable that classic
+    // TODO: ones don't. Check if gson will parse a classic response into a team competition class. If it doesn't,
+    // TODO: deserialization will need to take into account the "type" field in Competition.
+    public void getCompetition(int competitionId, Consumer<Competition> callback, Consumer<ErrorType> error) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(womUrl + "/competitions/" + competitionId))
+                .GET()
+                .setHeader("Content-Type", "application/json; utf-8")
+                .setHeader("Accept", "application/json")
+                .timeout(Duration.ofSeconds(10))
+                .build();
+
+        CompletableFuture<HttpResponse<InputStream>> response = httpClient.sendAsync(
+                        request, HttpResponse.BodyHandlers.ofInputStream())
+                .exceptionallyAsync(ex -> {
+                    if (ex.getCause() instanceof HttpTimeoutException) {
+                        log.info("Http timeout in getCompetition");
+                    }
+                    else {
+                        log.error("Unknown http error in getCompetition: " + ex.getCause().toString());
+                    }
+                    return null;
+                }, SwingUtilities::invokeLater);
+
+        response.thenAcceptAsync(
+                r -> {
+                    try {
+                        if (r.statusCode() != 200) {
+
+                            BufferedReader b = new BufferedReader(new InputStreamReader(r.body()));
+                            String line;
+                            if ((line = b.readLine()) != null) {
+                                log.error("Failed: Http error code: " + r.statusCode() + ", Error: " + line);
+                            }
+                            // TODO: Call error handler
+                            return;
+                        }
+
+                        InputStreamReader in = new InputStreamReader(r.body());
+                        BufferedReader br = new BufferedReader(in);
+                        String line;
+
+                        if ((line = br.readLine()) != null) {
+                            Competition c = gson.fromJson(line, Competition.class);
+
+                            // TODO: Check we actually have some data.... for all these functions
+                            callback.accept(c);
                         }
                     }
                     catch (NullPointerException e) {
