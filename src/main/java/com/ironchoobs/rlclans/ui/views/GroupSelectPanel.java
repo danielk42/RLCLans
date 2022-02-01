@@ -1,18 +1,22 @@
-package com.ironchoobs.rlclans;
+package com.ironchoobs.rlclans.ui.views;
 
-import lombok.Getter;
+import com.ironchoobs.rlclans.data.Player;
+import com.ironchoobs.rlclans.data.PlayerGroup;
+import com.ironchoobs.rlclans.DataProvider;
+import com.ironchoobs.rlclans.ui.helpers.CollapsiblePanel;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.List;
 
 @Slf4j
 public class GroupSelectPanel extends CollapsiblePanel {
+
+    private boolean loaded = false;
+    private Player player;
 
     private final JList<String> groupList = new JList<>();
     private final DefaultListModel<String> groupModel = new DefaultListModel<>();
@@ -69,5 +73,9 @@ public class GroupSelectPanel extends CollapsiblePanel {
         }, error -> {
             // TODO: Error handling
         });
+    }
+
+    protected void loadData() {
+
     }
 }

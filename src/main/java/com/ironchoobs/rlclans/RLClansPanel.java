@@ -1,5 +1,8 @@
 package com.ironchoobs.rlclans;
 
+import com.ironchoobs.rlclans.data.Player;
+import com.ironchoobs.rlclans.ui.views.GroupSelectPanel;
+import com.ironchoobs.rlclans.ui.views.OverviewPanel;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.client.game.SkillIconManager;
@@ -8,7 +11,6 @@ import net.runelite.client.ui.PluginPanel;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;

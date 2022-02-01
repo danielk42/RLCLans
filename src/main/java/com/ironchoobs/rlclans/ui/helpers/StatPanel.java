@@ -1,4 +1,4 @@
-package com.ironchoobs.rlclans;
+package com.ironchoobs.rlclans.ui.helpers;
 
 import javax.swing.*;
 import java.awt.*;

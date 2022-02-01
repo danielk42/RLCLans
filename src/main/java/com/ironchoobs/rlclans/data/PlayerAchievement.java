@@ -1,4 +1,6 @@
-package com.ironchoobs.rlclans;
+package com.ironchoobs.rlclans.data;
+
+import com.ironchoobs.rlclans.data.Player;
 
 import java.util.Date;
 

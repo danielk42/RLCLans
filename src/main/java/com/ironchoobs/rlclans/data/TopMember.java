@@ -1,4 +1,4 @@
-package com.ironchoobs.rlclans;
+package com.ironchoobs.rlclans.data;
 
 // Represents the monthly top member for a group according to Wise Old Man
 public class TopMember {

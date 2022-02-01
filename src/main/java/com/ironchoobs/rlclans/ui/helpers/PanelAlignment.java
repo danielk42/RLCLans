@@ -1,4 +1,4 @@
-package com.ironchoobs.rlclans;
+package com.ironchoobs.rlclans.ui.helpers;
 
 public enum PanelAlignment {
     LEFT,

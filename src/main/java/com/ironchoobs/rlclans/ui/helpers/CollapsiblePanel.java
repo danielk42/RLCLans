@@ -1,10 +1,10 @@
-package com.ironchoobs.rlclans;
+package com.ironchoobs.rlclans.ui.helpers;
 
 import javax.swing.*;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 
-public class CollapsiblePanel extends JPanel {
+public abstract class CollapsiblePanel extends JPanel {
 
     private final JButton button = new JButton();
     private boolean collapsed = true;
@@ -47,7 +47,11 @@ public class CollapsiblePanel extends JPanel {
         else {
             button.setText("Collapse");
             body.setVisible(true);
+
+            loadData();
         }
     }
+
+    protected abstract void loadData();
 
 }

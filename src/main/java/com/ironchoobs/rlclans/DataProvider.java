@@ -1,6 +1,7 @@
 package com.ironchoobs.rlclans;
 
 import com.google.gson.Gson;
+import com.ironchoobs.rlclans.data.*;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
@@ -295,7 +296,7 @@ public class DataProvider {
 
     // Period based leaderboard (see WomPeriod)
     public void getGroupLeaderboard(int groupId, WomMetric metric, WomPeriod period, int limit, int offset,
-                                     Consumer<LeaderboardEntry[]> callback, Consumer<ErrorType> error) {
+                                    Consumer<LeaderboardEntry[]> callback, Consumer<ErrorType> error) {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(womUrl + "/groups/" + groupId + "/gained?metric="

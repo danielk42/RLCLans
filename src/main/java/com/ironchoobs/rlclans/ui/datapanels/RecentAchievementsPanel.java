@@ -1,4 +1,9 @@
-package com.ironchoobs.rlclans;
+package com.ironchoobs.rlclans.ui.datapanels;
+
+import com.ironchoobs.rlclans.DataProvider;
+import com.ironchoobs.rlclans.data.PlayerAchievement;
+import com.ironchoobs.rlclans.ui.helpers.PanelAlignment;
+import com.ironchoobs.rlclans.ui.helpers.StatPanel;
 
 import javax.swing.*;
 import java.util.ArrayList;

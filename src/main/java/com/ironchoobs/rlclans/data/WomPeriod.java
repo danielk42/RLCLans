@@ -1,4 +1,4 @@
-package com.ironchoobs.rlclans;
+package com.ironchoobs.rlclans.data;
 
 public enum WomPeriod {
     fiveMin("5min"),

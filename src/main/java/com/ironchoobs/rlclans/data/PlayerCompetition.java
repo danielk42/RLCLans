@@ -1,4 +1,4 @@
-package com.ironchoobs.rlclans;
+package com.ironchoobs.rlclans.data;
 
 public class PlayerCompetition {
     public int id;

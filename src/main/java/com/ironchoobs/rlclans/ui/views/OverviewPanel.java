@@ -1,4 +1,14 @@
-package com.ironchoobs.rlclans;
+package com.ironchoobs.rlclans.ui.views;
+
+import com.ironchoobs.rlclans.ui.datapanels.LeaderboardPanel;
+import com.ironchoobs.rlclans.data.Player;
+import com.ironchoobs.rlclans.data.PlayerGroup;
+import com.ironchoobs.rlclans.ui.datapanels.RecentAchievementsPanel;
+import com.ironchoobs.rlclans.DataProvider;
+import com.ironchoobs.rlclans.data.WomMetric;
+import com.ironchoobs.rlclans.data.WomPeriod;
+import com.ironchoobs.rlclans.ui.helpers.CollapsiblePanel;
+import com.ironchoobs.rlclans.ui.helpers.PanelAlignment;
 
 import javax.swing.*;
 import javax.swing.border.LineBorder;
@@ -90,20 +100,8 @@ public class OverviewPanel extends CollapsiblePanel {
         // TODO: Add refresh button to reload all data
     }
 
-    @Override
-    public void setCollapsed(boolean collapsed) {
-        super.setCollapsed(collapsed);
-        if (!collapsed) {
-            loadData();
-        }
-
-        // TODO: Refresh button on this panel should call refresh() on child LeaderboardPanels
-
-        // TODO: Reload button should call loadData()
-    }
-
     // Can be called multiple times, but will only try to load data again if it failed last time.
-    private void loadData() {
+    protected void loadData() {
         topDailyGainsPanel.loadData();
         recentAchievementsPanel.loadData();
     }
